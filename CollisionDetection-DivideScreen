@@ -1,0 +1,239 @@
+<html>
+	<head>
+		<style>
+			.item {
+				position: fixed;
+			}
+		</style>
+	</head>
+	<body onmousemove="updateCursorPos(event)"
+		  onmousedown="accelerate()"
+		  onmouseup="deccelerate()">
+	</body>
+	<script>
+		class Item {
+			constructor(id, radius) {
+				this.id = id;
+				this.radius = radius;
+				this.baseRadius = radius;
+				this.speed = 300/radius;
+				this.baseSpeed = 300/radius;
+				this.degree = 0;
+				this.direction = Math.random()*2-1;
+				this.color = randomColor(radius);
+
+				this.div = document.createElement("div");
+				this.div.id = this.id;
+				this.div.className = "item";
+				this.div.style.width = radius/12 + "px";
+				this.div.style.height = radius/12 + "px";
+				this.div.style.backgroundColor = this.color;
+				document.getElementsByTagName("body").item(0).appendChild(this.div);
+			}
+
+			updatePosition() {
+				let posX = x + this.radius*Math.sin(this.degree*deg2rad);
+				let posY = y + this.radius*Math.cos(this.degree*deg2rad);
+				this.div.style.left = posX;
+				this.div.style.top = posY;
+				this.div.style.webkitTransform = 'rotate('+((-1)*this.degree+180)+'deg)';
+			}
+
+			startRotation() {
+				setInterval(() => {
+					this.speed = (this.speed<=this.baseSpeed)?this.baseSpeed:this.speed*acceleration;
+					this.speed = (this.speed>=20*this.baseSpeed)?this.baseSpeed*20:this.speed*acceleration;
+					this.degree += this.direction*this.speed;
+					if (this.degree >= 359.999999999) this.degree -= 360;
+					if (this.degree <= -359.999999999) this.degree += 360;
+					this.radius = (this.radius<this.baseRadius*0.5)?this.baseRadius*0.5:this.radius/((acceleration-1)/10+1);
+					this.radius = (this.radius>this.baseRadius)?this.baseRadius:this.radius/acceleration;
+
+					this.updatePosition();
+				}, 1000/60);
+			}
+		}
+		let x = 1; y = 1;
+		let deg2rad = Math.PI/180;
+		let colorPicker = (Math.random()*3)^0;
+		let acceleration = 1;
+		function updateCursorPos(event) {
+			x = event.pageX;
+			y = event.pageY;
+		}
+		function randomColor(x) {
+			let r = colorPicker==0?255-(255/680*x)^0:0;
+			let g = colorPicker==1?255-(255/680*x)^0:0;
+			let b = colorPicker==2?255-(255/680*x)^0:0;
+			return "rgb("+r+","+g+","+b+")";
+		}
+		let numOfItems = (Math.random()*20+10)^0;
+		let itemArr = [];
+		for (let i = 0; i < 400; i++) {
+			let radius = (Math.random()*680+20)^0;
+			let item = new Item(i, radius);
+			item.startRotation();
+			itemArr[i] = item;
+		}
+		function accelerate() {
+			acceleration = 1.01;
+		}
+		function deccelerate() {
+			acceleration = 0.99;
+		}
+		let xAxis = [];
+		let yAxis = [];
+		let possibleCollisions = [];
+		function updateCollisionPoints(items) {
+			clearCollisionPoints();
+			items.map((item,index)=>{
+				let possibleCollisionFlag = false;
+				for (let i = parseInt(item.div.style.left);
+						 i < parseInt(item.div.style.left) + parseInt(item.div.style.width);
+						 i++) {
+					if (typeof xAxis[i] != "undefined") {
+						if (typeof possibleCollisions[index] == "undefined") {
+							possibleCollisions[index] = item;
+							if (typeof possibleCollisions[xAxis[i]] == "undefined") {
+								possibleCollisions[xAxis[i]] = itemArr[xAxis[i]];
+							}
+						}
+						break;
+					} else {
+						xAxis[i] = index;
+					}
+				}
+				for (let i = parseInt(item.div.style.top);
+						 i < parseInt(item.div.style.top) + parseInt(item.div.style.height);
+						 i++) {
+					if (typeof yAxis[i] != "undefined") {
+						if (typeof possibleCollisions[index] == "undefined") {
+							possibleCollisions[index] = item;
+							if (typeof possibleCollisions[yAxis[i]] == "undefined") {
+								possibleCollisions[yAxis[i]] = itemArr[yAxis[i]];
+							}
+						}
+						break;
+					} else {
+						yAxis[i] = index;
+					}
+				}
+			});
+		}
+		function clearCollisionPoints() {
+			xAxis = [];
+			yAxis = [];
+			possibleCollisions = [];
+		}
+		function detailedCollisionCheck(items) {
+			let detectedCollisions = [];
+			for (let i = 0; i < items.length; i++) {
+				for (let j = i+1; j < items.length; j++) {
+					let itemA = items[i];
+					let itemB = items[j];
+					if ((typeof itemA == "undefined")||(typeof itemB == "undefined")) continue;
+					if (isColliding(itemA, itemB)) {
+						if (typeof detectedCollisions[i] == "undefined") {
+							detectedCollisions[i] = itemA;
+						}
+						if (typeof detectedCollisions[j] == "undefined") {
+							detectedCollisions[j] = itemB;
+						}
+						//itemA.div.style.backgroundColor = "Black";
+						//itemB.div.style.backgroundColor = "Black";
+					} else {
+						//itemA.div.style.backgroundColor = "Cyan";
+						//itemB.div.style.backgroundColor = "Cyan";
+					}
+				}
+			}
+			detectedCollisions.map((item, index)=>{
+				item.div.style.backgroundColor = "Black";
+			});
+		}
+		function collisionCheck2() {
+			let detectedCollisions = [];
+			for (let i = 0; i < itemArr.length; i++) {
+				for (let j = i+1; j < itemArr.length; j++) {
+					let itemA = itemArr[i];
+					let itemB = itemArr[j];
+					if ((typeof itemA == "undefined")||(typeof itemB == "undefined")) continue;
+					if (isColliding(itemA, itemB)) {
+						//itemA.div.style.backgroundColor = "Black";
+						//itemB.div.style.backgroundColor = "Black";
+						detectedCollisions[detectedCollisions.length] = itemA;
+						detectedCollisions[detectedCollisions.length] = itemB;
+					} else {
+						//itemA.div.style.backgroundColor = "Cyan";
+						//itemB.div.style.backgroundColor = "Cyan";
+					}
+				}
+			}
+			itemArr.map((item)=>{
+				item.div.style.backgroundColor = item.color;
+			});
+			detectedCollisions.map((item)=>{
+				item.div.style.backgroundColor = "Black";
+			});
+		}
+		function isColliding(itemA, itemB) {
+			let itemA_L = parseInt(itemA.div.style.left);
+			let itemA_R = parseInt(itemA.div.style.left) + parseInt(itemA.div.style.width);
+			let itemA_T = parseInt(itemA.div.style.top);
+			let itemA_B = parseInt(itemA.div.style.top) + parseInt(itemA.div.style.height);
+			let itemB_L = parseInt(itemB.div.style.left);
+			let itemB_R = parseInt(itemB.div.style.left) + parseInt(itemB.div.style.width);
+			let itemB_T = parseInt(itemB.div.style.top);
+			let itemB_B = parseInt(itemB.div.style.top) + parseInt(itemB.div.style.height);
+			//top left check
+			if ((itemA_R >= itemB_L)&&(itemA_R <= itemB_R)&&(itemA_B >= itemB_T)&&(itemA_B <= itemB_B)) {
+				return true;
+			}
+			//top right check
+			if ((itemA_L >= itemB_L)&&(itemA_L <= itemB_R)&&(itemA_B >= itemB_T)&&(itemA_B <= itemB_B)) {
+				return true;
+			}
+			//bottom left check
+			if ((itemA_R >= itemB_L)&&(itemA_R <= itemB_R)&&(itemA_T >= itemB_T)&&(itemA_T <= itemB_B)) {
+				return true;
+			}
+			//bottom right check
+			if ((itemA_L >= itemB_L)&&(itemA_L <= itemB_R)&&(itemA_T >= itemB_T)&&(itemA_T <= itemB_B)) {
+				return true;
+			}
+			return false;
+		}
+		setInterval(()=>{
+			var start = new Date().getTime();
+			itemArr.map((item)=>{
+				item.div.style.backgroundColor = item.color;
+			});
+			let itemsA = [], itemsB = [], itemsC = [], itemsD = [];
+			itemArr.map((item)=>{
+				if ((parseInt(item.div.style.left)<=x)&&(parseInt(item.div.style.top)<=y)) {
+					itemsA[itemsA.length] = item;
+				}
+				if ((parseInt(item.div.style.left)<=x)&&(parseInt(item.div.style.top)>=y)) {
+					itemsB[itemsB.length] = item;
+				}
+				if ((parseInt(item.div.style.left)>=x)&&(parseInt(item.div.style.top)<=y)) {
+					itemsC[itemsC.length] = item;
+				}
+				if ((parseInt(item.div.style.left)>=x)&&(parseInt(item.div.style.top)>=y)) {
+					itemsD[itemsD.length] = item;
+				}
+			});
+			updateCollisionPoints(itemsA);
+			detailedCollisionCheck(itemsA);
+			updateCollisionPoints(itemsB);
+			detailedCollisionCheck(itemsB);
+			updateCollisionPoints(itemsC);
+			detailedCollisionCheck(itemsC);
+			updateCollisionPoints(itemsD);
+			detailedCollisionCheck(itemsD);
+			//collisionCheck2();
+		　　var end = new Date().getTime();
+		　　console.log(end-start);
+		}, 1000/60);
+	</script>
+</html>
